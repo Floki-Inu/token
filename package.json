@@ -1,10 +1,10 @@
 {
-  "name": "@paulrberg/solidity-template",
-  "description": "Setup for writing Solidity smart contracts",
+  "name": "@Floki/token",
+  "description": "Contracts and infrastructure pertaining to the Floki token.",
   "version": "1.0.0",
   "author": {
-    "name": "Paul Razvan Berg",
-    "url": "https://paulrberg.com"
+    "name": "Floki Team",
+    "url": "https://theflokiinu.com"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.11",
@@ -60,7 +60,6 @@
   "keywords": [
     "blockchain",
     "ethereum",
-    "hardhat",
     "smart-contracts",
     "solidity"
   ],
@@ -85,6 +84,7 @@
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.3.2"
+    "@openzeppelin/contracts": "^4.3.2",
+    "@uniswap/v2-core": "^1.0.1"
   }
 }
