@@ -541,6 +541,8 @@ contract FLOKI is Context, IERC20, Ownable {
     }
 
     function setMarketingAddress(address _marketingAddress) external onlyOwner {
+        require(_marketingAddress != address(0), "FLOKI: Invalid marketing address");
+
         address _oldMarketingAddress = marketingAddress;
 
         marketingAddress = payable(_marketingAddress);
