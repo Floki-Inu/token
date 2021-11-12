@@ -14,7 +14,6 @@ contract FLOKI is Context, IERC20, Ownable {
     using Address for address;
 
     address payable public marketingAddress = payable(0x2b9d5c7f2EAD1A221d771Fb6bb5E35Df04D60AB0); // Marketing Address
-    address public immutable deadAddress = 0x000000000000000000000000000000000000dEaD;
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
