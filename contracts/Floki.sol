@@ -53,6 +53,11 @@ contract FLOKI is Context, IERC20, Ownable {
 
     event SwapTokensForETH(uint256 amountIn, address[] path);
 
+    event UpdatedTaxFee(uint256 oldTaxFee, uint256 newTaxFee);
+    event UpdatedLiquidityFee(uint256 oldiquidityFee, uint256 newLiquidityFee);
+    event UpdatedFeeRate(uint256 oldFeeRate, uint256 newFeeRate);
+    event UpdatedMarketingAddress(address oldAddress, address newAddress);
+
     modifier lockTheSwap() {
         inSwapAndLiquify = true;
         _;
@@ -520,15 +525,27 @@ contract FLOKI is Context, IERC20, Ownable {
     }
 
     function setTaxFeePercent(uint256 taxFee) external onlyOwner {
+        uint256 _oldTaxFee = _taxFee;
+
         _taxFee = taxFee;
+
+        emit UpdatedTaxFee(_oldTaxFee, taxFee);
     }
 
     function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
+        uint256 _oldLiquidityFee = _liquidityFee;
+
         _liquidityFee = liquidityFee;
+
+        emit UpdatedLiquidityFee(_oldLiquidityFee, liquidityFee);
     }
 
     function setMarketingAddress(address _marketingAddress) external onlyOwner {
+        address _oldMarketingAddress = marketingAddress;
+
         marketingAddress = payable(_marketingAddress);
+
+        emit UpdatedMarketingAddress(_oldMarketingAddress, marketingAddress);
     }
 
     function transferToAddressETH(address payable recipient, uint256 amount) private {
@@ -559,7 +576,11 @@ contract FLOKI is Context, IERC20, Ownable {
     }
 
     function setFeeRate(uint256 rate) external onlyOwner {
+        uint256 _oldRate = _feeRate;
+
         _feeRate = rate;
+
+        emit UpdatedFeeRate(_oldRate, rate);
     }
 
     //to recieve ETH from uniswapV2Router when swaping
