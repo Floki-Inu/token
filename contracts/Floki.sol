@@ -545,11 +545,11 @@ contract FLOKI is Context, IERC20, Ownable {
         recipient.transfer(amount);
     }
 
-    function isRemovedSniper(address account) public view returns (bool) {
+    function isSniper(address account) public view returns (bool) {
         return _isSniper[account];
     }
 
-    function _removeSniper(address account) external onlyOwner {
+    function setSniper(address account) external onlyOwner {
         require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, "We can not blacklist Uniswap");
         require(!_isSniper[account], "Account is already blacklisted");
         _isSniper[account] = true;
