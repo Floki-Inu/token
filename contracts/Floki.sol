@@ -189,7 +189,7 @@ contract FLOKI is Context, IERC20, Ownable {
     }
 
     function includeInReward(address account) external onlyOwner {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcluded[account], "Account is not excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
