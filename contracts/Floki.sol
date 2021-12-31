@@ -17,8 +17,6 @@ contract FLOKI is Context, IERC20, Ownable {
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
-    mapping(address => bool) private _isSniper;
-    address[] private _confirmedSnipers;
 
     mapping(address => bool) private _isExcludedFromFee;
     mapping(address => bool) private _isExcluded;
@@ -221,18 +219,10 @@ contract FLOKI is Context, IERC20, Ownable {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
-        require(!_isSniper[to], "You have no power here!");
-        require(!_isSniper[msg.sender], "You have no power here!");
 
         // buy
         if (from == uniswapV2Pair && to != address(uniswapV2Router) && !_isExcludedFromFee[to]) {
             require(tradingOpen, "Trading not yet enabled.");
-
-            //antibot
-            if (block.timestamp == launchTime) {
-                _isSniper[to] = true;
-                _confirmedSnipers.push(to);
-            }
         }
 
         uint256 contractTokenBalance = balanceOf(address(this));
@@ -543,29 +533,6 @@ contract FLOKI is Context, IERC20, Ownable {
 
     function transferToAddressETH(address payable recipient, uint256 amount) private {
         recipient.transfer(amount);
-    }
-
-    function isSniper(address account) public view returns (bool) {
-        return _isSniper[account];
-    }
-
-    function setSniper(address account) external onlyOwner {
-        require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, "We can not blacklist Uniswap");
-        require(!_isSniper[account], "Account is already blacklisted");
-        _isSniper[account] = true;
-        _confirmedSnipers.push(account);
-    }
-
-    function _amnestySniper(address account) external onlyOwner {
-        require(_isSniper[account], "Account is not blacklisted");
-        for (uint256 i = 0; i < _confirmedSnipers.length; i++) {
-            if (_confirmedSnipers[i] == account) {
-                _confirmedSnipers[i] = _confirmedSnipers[_confirmedSnipers.length - 1];
-                _isSniper[account] = false;
-                _confirmedSnipers.pop();
-                break;
-            }
-        }
     }
 
     function setFeeRate(uint256 rate) external onlyOwner {
