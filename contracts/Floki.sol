@@ -27,7 +27,6 @@ contract FLOKI is Context, IERC20, Ownable {
     uint256 private _previousLiquidityFee = _liquidityFee;
 
     uint256 private _feeRate = 4;
-    uint256 launchTime;
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
@@ -72,9 +71,7 @@ contract FLOKI is Context, IERC20, Ownable {
     }
 
     function openTrading() external onlyOwner {
-        _liquidityFee = _previousLiquidityFee;
         tradingOpen = true;
-        launchTime = block.timestamp;
     }
 
     function name() public view returns (string memory) {
