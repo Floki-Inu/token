@@ -8,7 +8,12 @@ contract ZeroTaxHandler is ITaxHandler {
         address benefactor,
         address beneficiary,
         uint256 amount
-    ) external view override returns (uint256) {
+    ) external pure override returns (uint256) {
+        // Silence a few warnings. This will be optimized out by the compiler.
+        benefactor;
+        beneficiary;
+        amount;
+
         return 0;
     }
 }

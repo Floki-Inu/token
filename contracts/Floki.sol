@@ -16,10 +16,6 @@ contract FLOKI is Context, IERC20, Ownable {
     mapping(address => uint256) private _rOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    string private _name = "FLOKI";
-    string private _symbol = "FLOKI";
-    uint8 private _decimals = 9;
-
     ITaxHandler public taxHandler;
     ITreasuryHandler public treasuryHandler;
 
@@ -32,37 +28,37 @@ contract FLOKI is Context, IERC20, Ownable {
         emit Transfer(address(0), _msgSender(), totalSupply());
     }
 
-    function name() public view returns (string memory) {
-        return _name;
+    function name() external pure returns (string memory) {
+        return "FLOKI";
     }
 
-    function symbol() public view returns (string memory) {
-        return _symbol;
+    function symbol() external pure returns (string memory) {
+        return "FLOKI";
     }
 
-    function decimals() public view returns (uint8) {
-        return _decimals;
+    function decimals() external pure returns (uint8) {
+        return 9;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public pure override returns (uint256) {
         // Ten trillion, i.e., 10,000,000,000,000 tokens.
         return 1e13 * 1e9;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         return _rOwned[account];
     }
 
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function allowance(address owner, address spender) public view override returns (uint256) {
+    function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 amount) public override returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
@@ -71,7 +67,7 @@ contract FLOKI is Context, IERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) public override returns (bool) {
+    ) external override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(
             sender,
@@ -81,12 +77,12 @@ contract FLOKI is Context, IERC20, Ownable {
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         _approve(
             _msgSender(),
             spender,

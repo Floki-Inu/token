@@ -23,8 +23,8 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
         address tokenAddress,
         address routerAddress
     ) {
-        treasury = payable(treasury);
-        token = IERC20(token);
+        treasury = payable(treasuryAddress);
+        token = IERC20(tokenAddress);
         router = IUniswapV2Router02(routerAddress);
     }
 
@@ -33,6 +33,10 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
         address beneficiary,
         uint256 amount
     ) external nonReentrant {
+        // Silence a few warnings. This will be optimized out by the compiler.
+        benefactor;
+        amount;
+
         // No actions are done on transfers other than sells.
         if (!_exchangePools.contains(beneficiary)) {
             return;
@@ -61,6 +65,11 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
         address beneficiary,
         uint256 amount
     ) external nonReentrant {
+        // Silence a few warnings. This will be optimized out by the compiler.
+        benefactor;
+        beneficiary;
+        amount;
+
         return;
     }
 
