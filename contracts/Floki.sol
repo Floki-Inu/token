@@ -8,7 +8,7 @@ import "./tax/ITaxHandler.sol";
 import "./treasury/ITreasuryHandler.sol";
 
 contract FLOKI is IERC20, Ownable {
-    mapping(address => uint256) private _rOwned;
+    mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
 
     ITaxHandler public taxHandler;
@@ -18,7 +18,7 @@ contract FLOKI is IERC20, Ownable {
         taxHandler = ITaxHandler(taxHandlerAddress);
         treasuryHandler = ITreasuryHandler(treasuryHandlerAddress);
 
-        _rOwned[_msgSender()] = totalSupply();
+        _balances[_msgSender()] = totalSupply();
 
         emit Transfer(address(0), _msgSender(), totalSupply());
     }
@@ -41,7 +41,7 @@ contract FLOKI is IERC20, Ownable {
     }
 
     function balanceOf(address account) external view override returns (uint256) {
-        return _rOwned[account];
+        return _balances[account];
     }
 
     function transfer(address recipient, uint256 amount) external override returns (bool) {
@@ -115,11 +115,11 @@ contract FLOKI is IERC20, Ownable {
         uint256 tax = taxHandler.getTax(from, to, amount);
         uint256 taxedAmount = amount - tax;
 
-        _rOwned[from] -= amount;
-        _rOwned[to] += taxedAmount;
+        _balances[from] -= amount;
+        _balances[to] += taxedAmount;
 
         if (tax > 0) {
-            _rOwned[address(treasuryHandler)] += tax;
+            _balances[address(treasuryHandler)] += tax;
 
             emit Transfer(from, address(this), tax);
         }
