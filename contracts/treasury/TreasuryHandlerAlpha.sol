@@ -2,12 +2,14 @@
 pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import "../utils/ExchangePoolProcessor.sol";
 import "../utils/LenientReentrancyGuard.sol";
 
 contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
+    using Address for address payable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     address payable treasury;
@@ -55,7 +57,7 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
 
             uint256 contractEthBalance = address(this).balance;
             if (contractEthBalance > 0) {
-                treasury.call{ value: contractEthBalance }("");
+                treasury.sendValue(contractEthBalance);
             }
         }
     }
@@ -90,6 +92,14 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
         treasury = payable(newTreasuryAddress);
 
         emit TreasuryAddressUpdated(oldTreasuryAddress, newTreasuryAddress);
+    }
+
+    function withdraw(address tokenAddress, uint256 amount) external onlyOwner {
+        if (tokenAddress == address(0)) {
+            treasury.sendValue(amount);
+        } else {
+            IERC20(tokenAddress).transferFrom(address(this), address(treasury), amount);
+        }
     }
 
     function _swapTokensForEth(uint256 tokenAmount) private {
