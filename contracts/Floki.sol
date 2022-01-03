@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./tax/ITaxHandler.sol";
 import "./treasury/ITreasuryHandler.sol";
 
-contract FLOKI is Context, IERC20, Ownable {
+contract FLOKI is IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
