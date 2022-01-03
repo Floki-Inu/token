@@ -9,6 +9,8 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
+import "./tax/ITaxHandler.sol";
+
 contract FLOKI is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
@@ -23,13 +25,12 @@ contract FLOKI is Context, IERC20, Ownable {
     string private _symbol = "FLOKI";
     uint8 private _decimals = 9;
 
-    uint256 public _liquidityFee = 4;
-    uint256 private _previousLiquidityFee = _liquidityFee;
-
     uint256 private _feeRate = 4;
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
+
+    ITaxHandler public taxHandler;
 
     bool inSwapAndLiquify;
 
@@ -39,7 +40,6 @@ contract FLOKI is Context, IERC20, Ownable {
 
     event SwapTokensForETH(uint256 amountIn, address[] path);
 
-    event UpdatedLiquidityFee(uint256 oldiquidityFee, uint256 newLiquidityFee);
     event UpdatedFeeRate(uint256 oldFeeRate, uint256 newFeeRate);
     event UpdatedMarketingAddress(address oldAddress, address newAddress);
 
@@ -49,7 +49,9 @@ contract FLOKI is Context, IERC20, Ownable {
         inSwapAndLiquify = false;
     }
 
-    constructor() {
+    constructor(address taxHandlerAddress) {
+        taxHandler = ITaxHandler(taxHandlerAddress);
+
         _rOwned[_msgSender()] = totalSupply();
 
         emit Transfer(address(0), _msgSender(), totalSupply());
@@ -65,9 +67,6 @@ contract FLOKI is Context, IERC20, Ownable {
         );
 
         uniswapV2Router = _uniswapV2Router;
-
-        _isExcludedFromFee[owner()] = true;
-        _isExcludedFromFee[address(this)] = true;
     }
 
     function openTrading() external onlyOwner {
@@ -159,7 +158,7 @@ contract FLOKI is Context, IERC20, Ownable {
         require(amount > 0, "Transfer amount must be greater than zero");
 
         // buy
-        if (from == uniswapV2Pair && to != address(uniswapV2Router) && !_isExcludedFromFee[to]) {
+        if (from == uniswapV2Pair && to != address(uniswapV2Router)) {
             require(tradingOpen, "Trading not yet enabled.");
         }
 
@@ -176,14 +175,19 @@ contract FLOKI is Context, IERC20, Ownable {
             }
         }
 
-        bool takeFee = false;
+        uint256 tax = taxHandler.getTax(from, to, amount);
+        uint256 taxedAmount = amount - tax;
 
-        //take fee only on swaps
-        if ((from == uniswapV2Pair || to == uniswapV2Pair) && !(_isExcludedFromFee[from] || _isExcludedFromFee[to])) {
-            takeFee = true;
+        _rOwned[from] -= amount;
+        _rOwned[to] += taxedAmount;
+
+        if (tax > 0) {
+            _rOwned[address(this)] += tax;
+
+            emit Transfer(from, address(this), tax);
         }
 
-        _tokenTransfer(from, to, amount, takeFee);
+        emit Transfer(from, to, taxedAmount);
     }
 
     function swapTokens(uint256 contractTokenBalance) private lockTheSwap {
@@ -219,68 +223,6 @@ contract FLOKI is Context, IERC20, Ownable {
         );
 
         emit SwapTokensForETH(tokenAmount, path);
-    }
-
-    function _tokenTransfer(
-        address sender,
-        address recipient,
-        uint256 amount,
-        bool takeFee
-    ) private {
-        if (!takeFee) {
-            removeAllFee();
-        }
-
-        _transferStandard(sender, recipient, amount);
-
-        if (!takeFee) {
-            restoreAllFee();
-        }
-    }
-
-    function _transferStandard(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) private {
-        uint256 tax = (amount * _liquidityFee) / 100;
-        uint256 taxedAmount = amount - tax;
-
-        _rOwned[sender] -= taxedAmount;
-        _rOwned[recipient] += taxedAmount;
-
-        emit Transfer(sender, recipient, taxedAmount);
-    }
-
-    function removeAllFee() private {
-        if (_liquidityFee == 0) return;
-
-        _previousLiquidityFee = _liquidityFee;
-        _liquidityFee = 0;
-    }
-
-    function restoreAllFee() private {
-        _liquidityFee = _previousLiquidityFee;
-    }
-
-    function isExcludedFromFee(address account) public view returns (bool) {
-        return _isExcludedFromFee[account];
-    }
-
-    function excludeFromFee(address account) public onlyOwner {
-        _isExcludedFromFee[account] = true;
-    }
-
-    function includeInFee(address account) public onlyOwner {
-        _isExcludedFromFee[account] = false;
-    }
-
-    function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner {
-        uint256 _oldLiquidityFee = _liquidityFee;
-
-        _liquidityFee = liquidityFee;
-
-        emit UpdatedLiquidityFee(_oldLiquidityFee, liquidityFee);
     }
 
     function setMarketingAddress(address _marketingAddress) external onlyOwner {
