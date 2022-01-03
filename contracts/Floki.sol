@@ -4,14 +4,12 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./tax/ITaxHandler.sol";
 import "./treasury/ITreasuryHandler.sol";
 
 contract FLOKI is IERC20, Ownable {
     using SafeMath for uint256;
-    using Address for address;
 
     mapping(address => uint256) private _rOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
