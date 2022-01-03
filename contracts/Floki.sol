@@ -130,12 +130,4 @@ contract FLOKI is Context, IERC20, Ownable {
 
         emit Transfer(from, to, taxedAmount);
     }
-
-    //to recieve ETH from uniswapV2Router when swaping
-    receive() external payable {}
-
-    // Withdraw ETH that gets stuck in contract by accident
-    function emergencyWithdraw() external onlyOwner {
-        payable(owner()).send(address(this).balance);
-    }
 }
