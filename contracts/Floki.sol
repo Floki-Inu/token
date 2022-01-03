@@ -76,6 +76,7 @@ contract FLOKI is IERC20, Ownable {
 
     function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+
         return true;
     }
 
@@ -98,6 +99,7 @@ contract FLOKI is IERC20, Ownable {
         require(spender != address(0), "ERC20: approve to the zero address");
 
         _allowances[owner][spender] = amount;
+
         emit Approval(owner, spender, amount);
     }
 
