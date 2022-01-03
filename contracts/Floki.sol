@@ -5,72 +5,31 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import "./tax/ITaxHandler.sol";
+import "./treasury/ITreasuryHandler.sol";
 
 contract FLOKI is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
-    address payable public marketingAddress = payable(0x2b9d5c7f2EAD1A221d771Fb6bb5E35Df04D60AB0); // Marketing Address
     mapping(address => uint256) private _rOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
-
-    mapping(address => bool) private _isExcludedFromFee;
 
     string private _name = "FLOKI";
     string private _symbol = "FLOKI";
     uint8 private _decimals = 9;
 
-    uint256 private _feeRate = 4;
-
-    IUniswapV2Router02 public uniswapV2Router;
-    address public uniswapV2Pair;
-
     ITaxHandler public taxHandler;
+    ITreasuryHandler public treasuryHandler;
 
-    bool inSwapAndLiquify;
-
-    bool tradingOpen = false;
-
-    event SwapETHForTokens(uint256 amountIn, address[] path);
-
-    event SwapTokensForETH(uint256 amountIn, address[] path);
-
-    event UpdatedFeeRate(uint256 oldFeeRate, uint256 newFeeRate);
-    event UpdatedMarketingAddress(address oldAddress, address newAddress);
-
-    modifier lockTheSwap() {
-        inSwapAndLiquify = true;
-        _;
-        inSwapAndLiquify = false;
-    }
-
-    constructor(address taxHandlerAddress) {
+    constructor(address taxHandlerAddress, address treasuryHandlerAddress) {
         taxHandler = ITaxHandler(taxHandlerAddress);
+        treasuryHandler = ITreasuryHandler(treasuryHandlerAddress);
 
         _rOwned[_msgSender()] = totalSupply();
 
         emit Transfer(address(0), _msgSender(), totalSupply());
-    }
-
-    function initContract() external onlyOwner {
-        // PancakeSwap: 0x10ED43C718714eb63d5aA57B78B54704E256024E
-        // Uniswap V2: 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
-            address(this),
-            _uniswapV2Router.WETH()
-        );
-
-        uniswapV2Router = _uniswapV2Router;
-    }
-
-    function openTrading() external onlyOwner {
-        tradingOpen = true;
     }
 
     function name() public view returns (string memory) {
@@ -157,23 +116,7 @@ contract FLOKI is Context, IERC20, Ownable {
         require(to != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
 
-        // buy
-        if (from == uniswapV2Pair && to != address(uniswapV2Router)) {
-            require(tradingOpen, "Trading not yet enabled.");
-        }
-
-        uint256 contractTokenBalance = balanceOf(address(this));
-
-        //sell
-
-        if (!inSwapAndLiquify && tradingOpen && to == uniswapV2Pair) {
-            if (contractTokenBalance > 0) {
-                if (contractTokenBalance > balanceOf(uniswapV2Pair).mul(_feeRate).div(100)) {
-                    contractTokenBalance = balanceOf(uniswapV2Pair).mul(_feeRate).div(100);
-                }
-                swapTokens(contractTokenBalance);
-            }
-        }
+        treasuryHandler.beforeTransferHandler(from, to, amount);
 
         uint256 tax = taxHandler.getTax(from, to, amount);
         uint256 taxedAmount = amount - tax;
@@ -182,69 +125,14 @@ contract FLOKI is Context, IERC20, Ownable {
         _rOwned[to] += taxedAmount;
 
         if (tax > 0) {
-            _rOwned[address(this)] += tax;
+            _rOwned[address(treasuryHandler)] += tax;
 
             emit Transfer(from, address(this), tax);
         }
 
+        treasuryHandler.afterTransferHandler(from, to, amount);
+
         emit Transfer(from, to, taxedAmount);
-    }
-
-    function swapTokens(uint256 contractTokenBalance) private lockTheSwap {
-        swapTokensForEth(contractTokenBalance);
-
-        //Send to Marketing address
-        uint256 contractETHBalance = address(this).balance;
-        if (contractETHBalance > 0) {
-            sendETHToMarketing(address(this).balance);
-        }
-    }
-
-    function sendETHToMarketing(uint256 amount) private {
-        // Ignore the boolean return value. If it gets stuck, then retrieve via `emergencyWithdraw`.
-        marketingAddress.call{ value: amount }("");
-    }
-
-    function swapTokensForEth(uint256 tokenAmount) private {
-        // generate the uniswap pair path of token -> weth
-        address[] memory path = new address[](2);
-        path[0] = address(this);
-        path[1] = uniswapV2Router.WETH();
-
-        _approve(address(this), address(uniswapV2Router), tokenAmount);
-
-        // make the swap
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            tokenAmount,
-            0, // accept any amount of ETH
-            path,
-            address(this), // The contract
-            block.timestamp
-        );
-
-        emit SwapTokensForETH(tokenAmount, path);
-    }
-
-    function setMarketingAddress(address _marketingAddress) external onlyOwner {
-        require(_marketingAddress != address(0), "FLOKI: Invalid marketing address");
-
-        address _oldMarketingAddress = marketingAddress;
-
-        marketingAddress = payable(_marketingAddress);
-
-        emit UpdatedMarketingAddress(_oldMarketingAddress, marketingAddress);
-    }
-
-    function transferToAddressETH(address payable recipient, uint256 amount) private {
-        recipient.transfer(amount);
-    }
-
-    function setFeeRate(uint256 rate) external onlyOwner {
-        uint256 _oldRate = _feeRate;
-
-        _feeRate = rate;
-
-        emit UpdatedFeeRate(_oldRate, rate);
     }
 
     //to recieve ETH from uniswapV2Router when swaping
