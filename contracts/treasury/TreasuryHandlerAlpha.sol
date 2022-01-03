@@ -81,6 +81,11 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
     }
 
     function setTreasury(address newTreasuryAddress) external onlyOwner {
+        require(
+            newTreasuryAddress != address(0),
+            "TreasuryHandlerAlpha:setTreasury:ZERO_TREASURY: Cannot set zero address as treasury."
+        );
+
         address oldTreasuryAddress = address(treasury);
         treasury = payable(newTreasuryAddress);
 

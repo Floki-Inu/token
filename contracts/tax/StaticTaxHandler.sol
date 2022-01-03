@@ -40,6 +40,11 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     }
 
     function setTaxBasisPoints(uint256 newBasisPoints) external onlyOwner {
+        require(
+            newBasisPoints < taxBasisPoints,
+            "StaticTaxHandler:setTaxBasisPoints:HIGHER_VALUE: Basis points can only be lowered."
+        );
+
         uint256 oldBasisPoints = taxBasisPoints;
         taxBasisPoints = newBasisPoints;
 
