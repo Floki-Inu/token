@@ -14,9 +14,11 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
 
     address payable treasury;
     IERC20 public token;
+    uint256 public liquidityPercentage;
     uint256 public priceImpactPercentage;
     IUniswapV2Router02 public router;
 
+    event LiquidityPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
     event PriceImpactPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
     event TreasuryAddressUpdated(address oldTreasuryAddress, address newTreasuryAddress);
 
@@ -49,15 +51,36 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
             uint256 primaryPoolBalance = token.balanceOf(primaryPool);
             uint256 maxPriceImpactSale = (primaryPoolBalance * priceImpactPercentage) / 100;
 
+            // Ensure the price impact is within reasonable bounds.
             if (contractTokenBalance > maxPriceImpactSale) {
                 contractTokenBalance = maxPriceImpactSale;
             }
 
-            _swapTokensForEth(contractTokenBalance);
+            // The number of tokens to sell for liquidity purposes. This is calculated as follows:
+            //
+            //      B     P
+            //  L = - * -----
+            //      2   10000
+            //
+            // Where:
+            //  L = tokens to sell for liquidity
+            //  B = available token balance
+            //  P = basis points of tokens to use for liquidity
+            //
+            // The number is divided by two to preserve the token side of the token/WETH pool.
+            uint256 liquidityBasisPoints = liquidityPercentage * 100;
+            uint256 tokensForLiquidity = (contractTokenBalance * liquidityBasisPoints) / 10000 / 2;
 
-            uint256 contractEthBalance = address(this).balance;
-            if (contractEthBalance > 0) {
-                treasury.sendValue(contractEthBalance);
+            uint256 currentWeiBalance = address(this).balance;
+            _swapTokensForEth(contractTokenBalance);
+            uint256 weiEarned = currentWeiBalance - address(this).balance;
+            uint256 weiForLiquidity = (weiEarned * liquidityBasisPoints) / 10000;
+
+            _addLiquidity(tokensForLiquidity, weiForLiquidity);
+
+            uint256 remainingWeiBalance = address(this).balance;
+            if (remainingWeiBalance > 0) {
+                treasury.sendValue(remainingWeiBalance);
             }
         }
     }
@@ -73,6 +96,17 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
         amount;
 
         return;
+    }
+
+    function setLiquidityPercentage(uint256 newPercentage) external onlyOwner {
+        require(
+            newPercentage <= 100,
+            "TreasuryHandlerAlpha:setLiquidityPercentage:INVALID_PERCENTAGE: Cannot set more than 100 percent."
+        );
+        uint256 oldPercentage = liquidityPercentage;
+        liquidityPercentage = newPercentage;
+
+        emit LiquidityPercentageUpdated(oldPercentage, newPercentage);
     }
 
     function setPriceImpactPercentage(uint256 newPercentage) external onlyOwner {
@@ -109,5 +143,16 @@ contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
 
         token.approve(address(router), tokenAmount);
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(tokenAmount, 0, path, address(this), block.timestamp);
+    }
+
+    function _addLiquidity(uint256 tokenAmount, uint256 weiAmount) private {
+        router.addLiquidityETH{ value: weiAmount }(
+            address(token),
+            tokenAmount,
+            0,
+            0,
+            address(treasury),
+            block.timestamp
+        );
     }
 }
