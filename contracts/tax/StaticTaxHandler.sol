@@ -28,8 +28,11 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     /// @notice Emitted when an address is added to or removed from the exempted addresses set.
     event TaxExemptionUpdated(address indexed wallet, bool exempted);
 
-    constructor() {
-        taxBasisPoints = 300;
+    /**
+     * @param initialTaxBasisPoints The number of tax basis points to start out with for tax calculations.
+     */
+    constructor(uint256 initialTaxBasisPoints) {
+        taxBasisPoints = initialTaxBasisPoints;
     }
 
     /**
