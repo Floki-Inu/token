@@ -26,6 +26,14 @@ abstract contract ExchangePoolProcessor is Ownable {
     event PrimaryPoolUpdated(address oldPrimaryPool, address newPrimaryPool);
 
     /**
+     * @notice Get list of addresses designated as exchange pools.
+     * @return An array of exchange pool addresses.
+     */
+    function getExchangePoolAddresses() external view returns (address[] memory) {
+        return _exchangePools.values();
+    }
+
+    /**
      * @notice Add an address to the set of exchange pool addresses.
      * @dev Nothing happens if the pool already exists in the set.
      * @param exchangePool Address of exchange pool to add.
