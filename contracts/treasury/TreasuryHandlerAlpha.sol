@@ -7,6 +7,7 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import "../utils/ExchangePoolProcessor.sol";
 import "../utils/LenientReentrancyGuard.sol";
+import "./ITreasuryHandler.sol";
 
 /**
  * @title Treasury handler alpha contract
@@ -14,7 +15,7 @@ import "../utils/LenientReentrancyGuard.sol";
  * `liquidityPercentage` has been set to a non-zero value, then that percentage will instead be added to the designated
  * liquidity pool.
  */
-contract TreasuryHandlerAlpha is LenientReentrancyGuard, ExchangePoolProcessor {
+contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, ExchangePoolProcessor {
     using Address for address payable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
