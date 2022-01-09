@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
+/**
+ * @title Governance token interface.
+ */
 interface IGovernanceToken {
     struct Checkpoint {
         // The 32-bit unsigned integer is valid until these estimated dates for these given chains:
@@ -10,6 +13,8 @@ interface IGovernanceToken {
         uint32 blockNumber;
         uint224 votes;
     }
+
+    function getVotesAtBlock(address account, uint32 blockNumber) external view returns (uint224);
 
     event DelegateChanged(address delegator, address currentDelegate, address newDelegate);
     event DelegateVotesChanged(address delegatee, uint224 oldVotes, uint224 newVotes);

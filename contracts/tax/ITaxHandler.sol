@@ -2,12 +2,15 @@
 pragma solidity 0.8.11;
 
 /**
- * @title Transfer handler interface
- * @dev Lorem ipsum dolor sit amet.
+ * @title Tax handler interface
+ * @dev Any class that implements this interface can be used for protocol-specific tax calculations.
  */
 interface ITaxHandler {
     /**
-     * @dev Handle transfer functionality with any designated exchange(s).
+     * @param benefactor Address of the benefactor.
+     * @param beneficiary Address of the beneficiary.
+     * @param amount Number of tokens in the transfer.
+     * @return Number of tokens to pay as tax.
      */
     function getTax(
         address benefactor,

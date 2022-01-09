@@ -8,26 +8,47 @@ import "./governance/IGovernanceToken.sol";
 import "./tax/ITaxHandler.sol";
 import "./treasury/ITreasuryHandler.sol";
 
+/**
+ * @title Floki token contract
+ * @dev The Floki token has modular systems for tax and treasury handler as well as governance capabilities.
+ */
 contract FLOKI is IERC20, IGovernanceToken, Ownable {
+    /// @dev Registry of user token balances.
     mapping(address => uint256) private _balances;
+
+    /// @dev Registry of addresses users have given allowances to.
     mapping(address => mapping(address => uint256)) private _allowances;
 
+    /// @dev Registry of user delegates for governance.
     mapping(address => address) public delegates;
+
+    /// @dev Registry of nonces for vote delegation.
     mapping(address => uint256) public nonces;
+
+    /// @dev Registry of the number of balance checkpoints an account has.
     mapping(address => uint32) public numCheckpoints;
+
+    /// @dev Registry of balance checkpoints per account.
     mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
 
-    /// @notice The EIP-712 typehash for the contract's domain.
+    /// @dev The EIP-712 typehash for the contract's domain.
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
-    /// @notice The EIP-712 typehash for the delegation struct used by the contract.
+    /// @dev The EIP-712 typehash for the delegation struct used by the contract.
     bytes32 public constant DELEGATION_TYPEHASH =
         keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
+    /// @dev The contract implementing tax calculations.
     ITaxHandler public taxHandler;
+
+    /// @dev The contract that performs treasury-related operations.
     ITreasuryHandler public treasuryHandler;
 
+    /**
+     * @param taxHandlerAddress Initial tax handler contract.
+     * @param treasuryHandlerAddress Initial treasury handler contract.
+     */
     constructor(address taxHandlerAddress, address treasuryHandlerAddress) {
         taxHandler = ITaxHandler(taxHandlerAddress);
         treasuryHandler = ITreasuryHandler(treasuryHandlerAddress);
@@ -41,37 +62,71 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         return "FLOKI";
     }
 
+    /**
+     * @return Symbol of the token.
+     */
     function symbol() external pure returns (string memory) {
         return "FLOKI";
     }
 
+    /**
+     * @return Number of decimals used by the token.
+     */
     function decimals() external pure returns (uint8) {
         return 9;
     }
 
+    /**
+     * @return The maximum number of tokens that will ever be in existence.
+     */
     function totalSupply() public pure override returns (uint256) {
         // Ten trillion, i.e., 10,000,000,000,000 tokens.
         return 1e13 * 1e9;
     }
 
+    /**
+     * @param account Address to retrieve balance for.
+     * @return The number of tokens owned by `account`.
+     */
     function balanceOf(address account) external view override returns (uint256) {
         return _balances[account];
     }
 
+    /**
+     * @param recipient Address to send the caller's tokens to.
+     * @param amount The number of tokens to transfer to recipient.
+     * @return True if transfer succeeds, else an error is raised.
+     */
     function transfer(address recipient, uint256 amount) external override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
+    /**
+     * @param owner The address on behalf of whom tokens can be spent by `spender`.
+     * @param spender The address authorized to spend tokens on behalf of `owner`.
+     * @return The allowance `owner` has given `spender`.
+     */
     function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
+    /**
+     * @param spender Address to authorize for token expenditure.
+     * @param amount The number of tokens `spender` is allowed to spend.
+     * @return True if the approval succeeds, else an error is raised.
+     */
     function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
+    /**
+     * @param sender Address to move tokens from.
+     * @param recipient Address to send the caller's tokens to.
+     * @param amount The number of tokens to transfer to recipient.
+     * @return True if the transfer succeeds, else an error is raised.
+     */
     function transferFrom(
         address sender,
         address recipient,
@@ -91,12 +146,22 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         return true;
     }
 
+    /**
+     * @param spender Address of user authorized to spend caller's tokens.
+     * @param addedValue The number of tokens to add to `spender`'s allowance.
+     * @return True if the allowance is successfully increased, else an error is raised.
+     */
     function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
 
         return true;
     }
 
+    /**
+     * @param spender Address of user authorized to spend caller's tokens.
+     * @param subtractedValue The number of tokens to remove from `spender`'s allowance.
+     * @return True if the allowance is successfully decreased, else an error is raised.
+     */
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 currentAllowance = _allowances[_msgSender()][spender];
         require(
@@ -110,10 +175,22 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         return true;
     }
 
+    /**
+     * @param delegatee Address to delegate votes to.
+     */
     function delegate(address delegatee) external {
         return _delegate(msg.sender, delegatee);
     }
 
+    /**
+     * @notice Delegates votes from signatory to `delegatee`.
+     * @param delegatee The address to delegate votes to.
+     * @param nonce The contract state required to match the signature.
+     * @param expiry The time at which to expire the signature.
+     * @param v The recovery byte of the signature.
+     * @param r Half of the ECDSA signature pair.
+     * @param s Half of the ECDSA signature pair.
+     */
     function delegateBySig(
         address delegatee,
         uint256 nonce,
@@ -136,6 +213,13 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         return _delegate(signatory, delegatee);
     }
 
+    /**
+     * @notice Determine the number of votes for an account as of a block number.
+     * @dev Block number must be a finalized block or else this function will revert to prevent misinformation.
+     * @param account The address of the account to check.
+     * @param blockNumber The block number to get the vote balance at.
+     * @return The number of votes the account had as of the given block.
+     */
     function getVotesAtBlock(address account, uint32 blockNumber) public view returns (uint224) {
         require(
             blockNumber < block.number,
@@ -177,6 +261,10 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         return checkpoints[account][lowerBound].votes;
     }
 
+    /**
+     * @param delegator Address from which to delegate votes for.
+     * @param delegatee Address to delegate votes to.
+     */
     function _delegate(address delegator, address delegatee) private {
         address currentDelegate = delegates[delegator];
         uint256 delegatorBalance = _balances[delegator];
@@ -187,6 +275,12 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         _moveDelegates(currentDelegate, delegatee, uint224(delegatorBalance));
     }
 
+    /**
+     * @notice Move delegates from one address to another.
+     * @param srcRep Representative to move delegates from.
+     * @param dstRep Representative to move delegates to.
+     * @param amount Number of delegates to move.
+     */
     function _moveDelegates(
         address srcRep,
         address dstRep,
@@ -211,6 +305,13 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         }
     }
 
+    /**
+     * @notice Write balance checkpoint to chain.
+     * @param delegatee The address to write the checkpoint for.
+     * @param nCheckpoints The number of checkpoints `delegatee` already has.
+     * @param oldVotes Number of votes prior to this checkpoint.
+     * @param newVotes Number of votes `delegatee` now has.
+     */
     function _writeCheckpoint(
         address delegatee,
         uint32 nCheckpoints,
@@ -229,6 +330,11 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
+    /**
+     * @param owner Address on behalf of whom tokens can be spent by `spender`.
+     * @param spender Address to authorize for token expenditure.
+     * @param amount The number of tokens `spender` is allowed to spend.
+     */
     function _approve(
         address owner,
         address spender,
@@ -242,6 +348,12 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         emit Approval(owner, spender, amount);
     }
 
+    /**
+     * @notice Transfer `amount` tokens from account `from` to account `to`.
+     * @param from Address the tokens are moved out of.
+     * @param to Address the tokens are moved to.
+     * @param amount The number of tokens to transfer.
+     */
     function _transfer(
         address from,
         address to,
