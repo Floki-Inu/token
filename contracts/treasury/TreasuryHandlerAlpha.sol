@@ -56,6 +56,9 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
         treasury = payable(treasuryAddress);
         token = IERC20(tokenAddress);
         router = IUniswapV2Router02(routerAddress);
+
+        liquidityPercentage = 0;
+        priceImpactPercentage = 3;
     }
 
     /**
