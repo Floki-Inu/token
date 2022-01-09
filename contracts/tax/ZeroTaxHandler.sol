@@ -3,7 +3,19 @@ pragma solidity 0.8.11;
 
 import "./ITaxHandler.sol";
 
+/**
+ * @title Zero tax handler contract
+ * @dev This contract should only be used by protocols that collect taxes on certain transactions and want to set it to
+ * zero.
+ */
 contract ZeroTaxHandler is ITaxHandler {
+    /**
+     * @dev Get taxed tokens for transfers. This method always returns zero.
+     * @param benefactor Address of the benefactor.
+     * @param beneficiary Address of the beneficiary.
+     * @param amount Number of tokens in the transfer.
+     * @return Number of tokens to pay as tax. This is statically set to zero.
+     */
     function getTax(
         address benefactor,
         address beneficiary,
