@@ -82,7 +82,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
             return;
         }
 
-        uint256 contractTokenBalance = token.balanceOf(address(token));
+        uint256 contractTokenBalance = token.balanceOf(address(this));
         if (contractTokenBalance > 0) {
             uint256 primaryPoolBalance = token.balanceOf(primaryPool);
             uint256 maxPriceImpactSale = (primaryPoolBalance * priceImpactPercentage) / 100;
