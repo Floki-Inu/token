@@ -47,18 +47,22 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
      * @param treasuryAddress Address of treasury to use.
      * @param tokenAddress Address of token to accumulate and sell.
      * @param routerAddress Address of Uniswap router for sell and liquidity operations.
+     * @param initialLiquidityPercentage Initial value for percentage of swap to add to liquidity.
+     * @param initialPriceImpactPercentage Initial value for percentage of price impact to account for during swaps.
      */
     constructor(
         address treasuryAddress,
         address tokenAddress,
-        address routerAddress
+        address routerAddress,
+        uint256 initialLiquidityPercentage,
+        uint256 initialPriceImpactPercentage
     ) {
         treasury = payable(treasuryAddress);
         token = IERC20(tokenAddress);
         router = IUniswapV2Router02(routerAddress);
 
-        liquidityPercentage = 0;
-        priceImpactPercentage = 3;
+        liquidityPercentage = initialLiquidityPercentage;
+        priceImpactPercentage = initialPriceImpactPercentage;
     }
 
     /**
