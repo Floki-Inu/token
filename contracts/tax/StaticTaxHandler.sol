@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./ITaxHandler.sol";
@@ -20,9 +19,6 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     /// @dev The set of addresses exempt from tax.
     EnumerableSet.AddressSet private _exempted;
 
-    /// @dev The token to collect tax for.
-    IERC20 public token;
-
     /// @dev How much tax to collect in basis points. 10,000 basis points is 100%.
     uint256 public taxBasisPoints;
 
@@ -32,8 +28,7 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     /// @dev Emitted when an address is added to or removed from the exempted addresses set.
     event TaxExemptionUpdated(address indexed wallet, bool exempted);
 
-    constructor(address tokenAddress) {
-        token = IERC20(tokenAddress);
+    constructor() {
         taxBasisPoints = 300;
     }
 
