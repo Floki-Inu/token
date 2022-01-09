@@ -49,7 +49,7 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
         }
 
         // Transactions between regular users (this includes contract) aren't taxed.
-        if (!_exchangePools.contains(benefactor) && _exchangePools.contains(beneficiary)) {
+        if (!_exchangePools.contains(benefactor) && !_exchangePools.contains(beneficiary)) {
             return 0;
         }
 
