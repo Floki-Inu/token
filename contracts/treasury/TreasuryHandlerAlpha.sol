@@ -12,7 +12,7 @@ import "./ITreasuryHandler.sol";
 /**
  * @title Treasury handler alpha contract
  * @dev Sells tokens that have accumulated through taxes and sends the resulting ETH to the treasury. If
- * `liquidityPercentage` has been set to a non-zero value, then that percentage will instead be added to the designated
+ * `liquidityBasisPoints` has been set to a non-zero value, then that percentage will instead be added to the designated
  * liquidity pool.
  */
 contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, ExchangePoolProcessor {
@@ -25,20 +25,20 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     /// @notice The token that accumulates through taxes. This will be sold for ETH.
     IERC20 public token;
 
-    /// @notice The percentage of tokens to sell and add as liquidity to the pool.
-    uint256 public liquidityPercentage;
+    /// @notice The basis points of tokens to sell and add as liquidity to the pool.
+    uint256 public liquidityBasisPoints;
 
     /// @notice The maximum price impact the sell (initiated from this contract) may have.
-    uint256 public priceImpactPercentage;
+    uint256 public priceImpactBasisPoints;
 
     /// @notice The Uniswap router that handles the sell and liquidity operations.
     IUniswapV2Router02 public router;
 
-    /// @notice Emitted when the percentage of tokens to add as liquidity is updated.
-    event LiquidityPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
+    /// @notice Emitted when the basis points value of tokens to add as liquidity is updated.
+    event LiquidityBasisPointsUpdated(uint256 oldBasisPoints, uint256 newBasisPoints);
 
-    /// @notice Emitted when the maximum price impact percentage is updated.
-    event PriceImpactPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
+    /// @notice Emitted when the maximum price impact basis points value is updated.
+    event PriceImpactBasisPointsUpdated(uint256 oldBasisPoints, uint256 newBasisPoints);
 
     /// @notice Emitted when the treasury address is updated.
     event TreasuryAddressUpdated(address oldTreasuryAddress, address newTreasuryAddress);
@@ -47,22 +47,21 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
      * @param treasuryAddress Address of treasury to use.
      * @param tokenAddress Address of token to accumulate and sell.
      * @param routerAddress Address of Uniswap router for sell and liquidity operations.
-     * @param initialLiquidityPercentage Initial value for percentage of swap to add to liquidity.
-     * @param initialPriceImpactPercentage Initial value for percentage of price impact to account for during swaps.
+     * @param initialLiquidityBasisPoints Initial basis points value of swap to add to liquidity.
+     * @param initialPriceImpactBasisPoints Initial basis points value of price impact to account for during swaps.
      */
     constructor(
         address treasuryAddress,
         address tokenAddress,
         address routerAddress,
-        uint256 initialLiquidityPercentage,
-        uint256 initialPriceImpactPercentage
+        uint256 initialLiquidityBasisPoints,
+        uint256 initialPriceImpactBasisPoints
     ) {
         treasury = payable(treasuryAddress);
         token = IERC20(tokenAddress);
         router = IUniswapV2Router02(routerAddress);
-
-        liquidityPercentage = initialLiquidityPercentage;
-        priceImpactPercentage = initialPriceImpactPercentage;
+        liquidityBasisPoints = initialLiquidityBasisPoints;
+        priceImpactBasisPoints = initialPriceImpactBasisPoints;
     }
 
     /**
@@ -92,7 +91,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
         uint256 contractTokenBalance = token.balanceOf(address(this));
         if (contractTokenBalance > 0) {
             uint256 primaryPoolBalance = token.balanceOf(primaryPool);
-            uint256 maxPriceImpactSale = (primaryPoolBalance * priceImpactPercentage) / 100;
+            uint256 maxPriceImpactSale = (primaryPoolBalance * priceImpactBasisPoints) / 10000;
 
             // Ensure the price impact is within reasonable bounds.
             if (contractTokenBalance > maxPriceImpactSale) {
@@ -111,8 +110,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
             //  P = basis points of tokens to use for liquidity
             //
             // The number is divided by two to preserve the token side of the token/WETH pool.
-            uint256 liquidityBasisPoints = liquidityPercentage * 100;
-            uint256 tokensForLiquidity = (contractTokenBalance * liquidityBasisPoints) / 10000 / 2;
+            uint256 tokensForLiquidity = (contractTokenBalance * liquidityBasisPoints) / 20000;
 
             uint256 currentWeiBalance = address(this).balance;
             _swapTokensForEth(contractTokenBalance);
@@ -153,29 +151,30 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @notice Set new liquidity percentage.
-     * @param newPercentage New liquidity percentage. Cannot exceed 100% as that would break the calculation.
+     * @notice Set new liquidity basis points value.
+     * @param newBasisPoints New liquidity basis points value. Cannot exceed 10,000 (i.e., 100%) as that would break the
+     * calculation.
      */
-    function setLiquidityPercentage(uint256 newPercentage) external onlyOwner {
+    function setLiquidityBasisPoints(uint256 newBasisPoints) external onlyOwner {
         require(
-            newPercentage <= 100,
-            "TreasuryHandlerAlpha:setLiquidityPercentage:INVALID_PERCENTAGE: Cannot set more than 100 percent."
+            newBasisPoints <= 10000,
+            "TreasuryHandlerAlpha:setLiquidityPercentage:INVALID_PERCENTAGE: Cannot set more than 10,000 basis points."
         );
-        uint256 oldPercentage = liquidityPercentage;
-        liquidityPercentage = newPercentage;
+        uint256 oldBasisPoints = liquidityBasisPoints;
+        liquidityBasisPoints = newBasisPoints;
 
-        emit LiquidityPercentageUpdated(oldPercentage, newPercentage);
+        emit LiquidityBasisPointsUpdated(oldBasisPoints, newBasisPoints);
     }
 
     /**
-     * @notice Set new price impact percentage.
-     * @param newPercentage New price impact percentage.
+     * @notice Set new price impact basis points value.
+     * @param newBasisPoints New price impact basis points value.
      */
-    function setPriceImpactPercentage(uint256 newPercentage) external onlyOwner {
-        uint256 oldPercentage = priceImpactPercentage;
-        priceImpactPercentage = newPercentage;
+    function setPriceImpactPercentage(uint256 newBasisPoints) external onlyOwner {
+        uint256 oldBasisPoints = priceImpactBasisPoints;
+        priceImpactBasisPoints = newBasisPoints;
 
-        emit PriceImpactPercentageUpdated(oldPercentage, newPercentage);
+        emit PriceImpactBasisPointsUpdated(oldBasisPoints, newBasisPoints);
     }
 
     /**
