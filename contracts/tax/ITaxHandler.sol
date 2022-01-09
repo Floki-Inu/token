@@ -7,6 +7,7 @@ pragma solidity 0.8.11;
  */
 interface ITaxHandler {
     /**
+     * @notice Get number of tokens to pay as tax.
      * @param benefactor Address of the benefactor.
      * @param beneficiary Address of the beneficiary.
      * @param amount Number of tokens in the transfer.

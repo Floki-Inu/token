@@ -10,7 +10,7 @@ import "./ITaxHandler.sol";
  */
 contract ZeroTaxHandler is ITaxHandler {
     /**
-     * @dev Get taxed tokens for transfers. This method always returns zero.
+     * @notice Get taxed tokens for transfers. This method always returns zero.
      * @param benefactor Address of the benefactor.
      * @param beneficiary Address of the beneficiary.
      * @param amount Number of tokens in the transfer.
