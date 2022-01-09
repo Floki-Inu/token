@@ -19,36 +19,36 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     /// @dev Registry of addresses users have given allowances to.
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    /// @dev Registry of user delegates for governance.
+    /// @notice Registry of user delegates for governance.
     mapping(address => address) public delegates;
 
-    /// @dev Registry of nonces for vote delegation.
+    /// @notice Registry of nonces for vote delegation.
     mapping(address => uint256) public nonces;
 
-    /// @dev Registry of the number of balance checkpoints an account has.
+    /// @notice Registry of the number of balance checkpoints an account has.
     mapping(address => uint32) public numCheckpoints;
 
-    /// @dev Registry of balance checkpoints per account.
+    /// @notice Registry of balance checkpoints per account.
     mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
 
-    /// @dev The EIP-712 typehash for the contract's domain.
+    /// @notice The EIP-712 typehash for the contract's domain.
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
-    /// @dev The EIP-712 typehash for the delegation struct used by the contract.
+    /// @notice The EIP-712 typehash for the delegation struct used by the contract.
     bytes32 public constant DELEGATION_TYPEHASH =
         keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
-    /// @dev The contract implementing tax calculations.
+    /// @notice The contract implementing tax calculations.
     ITaxHandler public taxHandler;
 
-    /// @dev The contract that performs treasury-related operations.
+    /// @notice The contract that performs treasury-related operations.
     ITreasuryHandler public treasuryHandler;
 
-    /// @dev Emitted when the tax handler contract is changed.
+    /// @notice Emitted when the tax handler contract is changed.
     event TaxHandlerChanged(address oldAddress, address newAddress);
 
-    /// @dev Emitted when the treasury handler contract is changed.
+    /// @notice Emitted when the treasury handler contract is changed.
     event TreasuryHandlerChanged(address oldAddress, address newAddress);
 
     /// @dev Name of the token.
@@ -81,6 +81,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Get token name.
      * @return Name of the token.
      */
     function name() public view returns (string memory) {
@@ -88,6 +89,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Get token symbol.
      * @return Symbol of the token.
      */
     function symbol() external view returns (string memory) {
@@ -95,6 +97,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Get number of decimals used by the token.
      * @return Number of decimals used by the token.
      */
     function decimals() external pure returns (uint8) {
@@ -102,6 +105,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Get the maximum number of tokens.
      * @return The maximum number of tokens that will ever be in existence.
      */
     function totalSupply() public pure override returns (uint256) {
@@ -110,6 +114,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Get token balance of given given account.
      * @param account Address to retrieve balance for.
      * @return The number of tokens owned by `account`.
      */
@@ -118,6 +123,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Transfer tokens from caller's address to another.
      * @param recipient Address to send the caller's tokens to.
      * @param amount The number of tokens to transfer to recipient.
      * @return True if transfer succeeds, else an error is raised.
@@ -128,6 +134,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Get the allowance `owner` has given `spender`.
      * @param owner The address on behalf of whom tokens can be spent by `spender`.
      * @param spender The address authorized to spend tokens on behalf of `owner`.
      * @return The allowance `owner` has given `spender`.
@@ -137,6 +144,12 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Approve address to spend caller's tokens.
+     * @dev This method can be exploited by malicious spenders if their allowance is already non-zero. See the following
+     * document for details: https://docs.google.com/document/d/1YLPtQxZu1UAvO9cZ1O2RPXBbT0mooh4DYKjA_jp-RLM/edit.
+     * Ensure the spender can be trusted before calling this method if they've already been approved before. Otherwise
+     * use either the `increaseAllowance`/`decreaseAllowance` functions, or first set their allowance to zero, before
+     * setting a new allowance.
      * @param spender Address to authorize for token expenditure.
      * @param amount The number of tokens `spender` is allowed to spend.
      * @return True if the approval succeeds, else an error is raised.
@@ -147,6 +160,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Transfer tokens from one address to another.
      * @param sender Address to move tokens from.
      * @param recipient Address to send the caller's tokens to.
      * @param amount The number of tokens to transfer to recipient.
@@ -172,6 +186,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Increase spender's allowance.
      * @param spender Address of user authorized to spend caller's tokens.
      * @param addedValue The number of tokens to add to `spender`'s allowance.
      * @return True if the allowance is successfully increased, else an error is raised.
@@ -183,6 +198,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Decrease spender's allowance.
      * @param spender Address of user authorized to spend caller's tokens.
      * @param subtractedValue The number of tokens to remove from `spender`'s allowance.
      * @return True if the allowance is successfully decreased, else an error is raised.
@@ -201,6 +217,9 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Delegate votes to given address.
+     * @dev It should be noted that users that want to vote themselves, also need to call this method, albeit with their
+     * own address.
      * @param delegatee Address to delegate votes to.
      */
     function delegate(address delegatee) external {
@@ -208,7 +227,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
-     * @notice Delegates votes from signatory to `delegatee`.
+     * @notice Delegate votes from signatory to `delegatee`.
      * @param delegatee The address to delegate votes to.
      * @param nonce The contract state required to match the signature.
      * @param expiry The time at which to expire the signature.
@@ -309,6 +328,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Delegate votes from one address to another.
      * @param delegator Address from which to delegate votes for.
      * @param delegatee Address to delegate votes to.
      */
@@ -378,6 +398,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
+     * @notice Approve spender on behalf of owner.
      * @param owner Address on behalf of whom tokens can be spent by `spender`.
      * @param spender Address to authorize for token expenditure.
      * @param amount The number of tokens `spender` is allowed to spend.

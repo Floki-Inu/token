@@ -11,18 +11,19 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 abstract contract ExchangePoolProcessor is Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    /// @dev Set of exchange pool addresses.
     EnumerableSet.AddressSet internal _exchangePools;
 
-    /// @dev Primary exchange pool address.
+    /// @notice Primary exchange pool address.
     address public primaryPool;
 
-    /// @dev Emitted when an exchange pool address is added to the set of tracked pool addresses.
+    /// @notice Emitted when an exchange pool address is added to the set of tracked pool addresses.
     event ExchangePoolAdded(address exchangePool);
 
-    /// @dev Emitted when an exchange pool address is removed from the set of tracked pool addresses.
+    /// @notice Emitted when an exchange pool address is removed from the set of tracked pool addresses.
     event ExchangePoolRemoved(address exchangePool);
 
-    /// @dev Emitted when the primary pool address is updated.
+    /// @notice Emitted when the primary pool address is updated.
     event PrimaryPoolUpdated(address oldPrimaryPool, address newPrimaryPool);
 
     /**

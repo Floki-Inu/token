@@ -5,7 +5,7 @@ import "./ITreasuryHandler.sol";
 
 contract ZeroTreasuryHandler is ITreasuryHandler {
     /**
-     * @dev Perform operations before a transfer is executed.
+     * @notice Perform operations before a transfer is executed.
      * @param benefactor Address of the benefactor.
      * @param beneficiary Address of the beneficiary.
      * @param amount Number of tokens in the transfer.
@@ -17,7 +17,7 @@ contract ZeroTreasuryHandler is ITreasuryHandler {
     ) external {}
 
     /**
-     * @dev Perform operations after a transfer is executed.
+     * @notice Perform operations after a transfer is executed.
      * @param benefactor Address of the benefactor.
      * @param beneficiary Address of the beneficiary.
      * @param amount Number of tokens in the transfer.

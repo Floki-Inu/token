@@ -19,28 +19,28 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     using Address for address payable;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    /// @dev The treasury address.
+    /// @notice The treasury address.
     address payable treasury;
 
-    /// @dev The token that accumulates through taxes. This will be sold for ETH.
+    /// @notice The token that accumulates through taxes. This will be sold for ETH.
     IERC20 public token;
 
-    /// @dev The percentage of tokens to sell and add as liquidity to the pool.
+    /// @notice The percentage of tokens to sell and add as liquidity to the pool.
     uint256 public liquidityPercentage;
 
-    /// @dev The maximum price impact the sell (initiated from this contract) may have.
+    /// @notice The maximum price impact the sell (initiated from this contract) may have.
     uint256 public priceImpactPercentage;
 
-    /// @dev The Uniswap router that handles the sell and liquidity operations.
+    /// @notice The Uniswap router that handles the sell and liquidity operations.
     IUniswapV2Router02 public router;
 
-    /// @dev Emitted when the percentage of tokens to add as liquidity is updated.
+    /// @notice Emitted when the percentage of tokens to add as liquidity is updated.
     event LiquidityPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
 
-    /// @dev Emitted when the maximum price impact percentage is updated.
+    /// @notice Emitted when the maximum price impact percentage is updated.
     event PriceImpactPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
 
-    /// @dev Emitted when the treasury address is updated.
+    /// @notice Emitted when the treasury address is updated.
     event TreasuryAddressUpdated(address oldTreasuryAddress, address newTreasuryAddress);
 
     /**
@@ -62,7 +62,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @dev Perform operations before a sell action (or a liquidity addition) is executed. The accumulated tokens are
+     * @notice Perform operations before a sell action (or a liquidity addition) is executed. The accumulated tokens are
      * then sold for ETH. In case the number of accumulated tokens exceeds the price impact percentage threshold, then
      * the number will be adjusted to stay within the threshold. If a non-zero percentage is set for liquidity, then
      * that percentage will be added to the primary liquidity pool instead of being sold for ETH and sent to the
@@ -113,10 +113,15 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
             uint256 currentWeiBalance = address(this).balance;
             _swapTokensForEth(contractTokenBalance);
             uint256 weiEarned = currentWeiBalance - address(this).balance;
+
+            // No need to divide this number, because that was only to have enough tokens remaining to pair with this
+            // ETH value.
             uint256 weiForLiquidity = (weiEarned * liquidityBasisPoints) / 10000;
 
             _addLiquidity(tokensForLiquidity, weiForLiquidity);
 
+            // It's cheaper to get the active balance rather than calculating based off of the `currentWeiBalance` and
+            // `weiForLiquidity` numbers.
             uint256 remainingWeiBalance = address(this).balance;
             if (remainingWeiBalance > 0) {
                 treasury.sendValue(remainingWeiBalance);
@@ -125,7 +130,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @dev Occurs after transfers, but this contract ignores those operations, hence nothing happens.
+     * @notice Perform post-transfer operations. This contract ignores those operations, hence nothing happens.
      * @param benefactor Address of the benefactor.
      * @param beneficiary Address of the beneficiary.
      * @param amount Number of tokens in the transfer.
@@ -144,7 +149,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @dev Set new liquidity percentage.
+     * @notice Set new liquidity percentage.
      * @param newPercentage New liquidity percentage. Cannot exceed 100% as that would break the calculation.
      */
     function setLiquidityPercentage(uint256 newPercentage) external onlyOwner {
@@ -159,7 +164,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @dev Set new price impact percentage.
+     * @notice Set new price impact percentage.
      * @param newPercentage New price impact percentage.
      */
     function setPriceImpactPercentage(uint256 newPercentage) external onlyOwner {
@@ -170,7 +175,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @dev Set new treasury address.
+     * @notice Set new treasury address.
      * @param newTreasuryAddress New treasury address.
      */
     function setTreasury(address newTreasuryAddress) external onlyOwner {
@@ -186,7 +191,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     }
 
     /**
-     * @dev Withdraw any tokens or ETH stuck in the treasury handler.
+     * @notice Withdraw any tokens or ETH stuck in the treasury handler.
      * @param tokenAddress Address of the token to withdraw. If set to the zero address, ETH will be withdrawn.
      * @param amount The number of tokens to withdraw.
      */
