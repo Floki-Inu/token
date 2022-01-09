@@ -409,7 +409,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         require(from != address(0), "FLOKI:_transfer:FROM_ZERO: Cannot transfer from the zero address.");
         require(to != address(0), "FLOKI:_transfer:TO_ZERO: Cannot transfer to the zero address.");
         require(amount > 0, "FLOKI:_transfer:ZERO_AMOUNT: Transfer amount must be greater than zero.");
-        require(amount >= _balances[from], "FLOKI:_transfer:INSUFFICIENT_BALANCE: Transfer amount exceeds balance.");
+        require(amount <= _balances[from], "FLOKI:_transfer:INSUFFICIENT_BALANCE: Transfer amount exceeds balance.");
 
         treasuryHandler.beforeTransferHandler(from, to, amount);
 
