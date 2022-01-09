@@ -45,6 +45,12 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     /// @dev The contract that performs treasury-related operations.
     ITreasuryHandler public treasuryHandler;
 
+    /// @dev Emitted when the tax handler contract is changed.
+    event TaxHandlerChanged(address oldAddress, address newAddress);
+
+    /// @dev Emitted when the treasury handler contract is changed.
+    event TreasuryHandlerChanged(address oldAddress, address newAddress);
+
     /**
      * @param taxHandlerAddress Initial tax handler contract.
      * @param treasuryHandlerAddress Initial treasury handler contract.
@@ -259,6 +265,28 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
 
         // No exact block found. Use last known balance before that block number.
         return checkpoints[account][lowerBound].votes;
+    }
+
+    /**
+     * @notice Set new tax handler contract.
+     * @param taxHandlerAddress Address of new tax handler contract.
+     */
+    function setTaxHandler(address taxHandlerAddress) external onlyOwner {
+        address oldTaxHandlerAddress = address(taxHandler);
+        taxHandler = ITaxHandler(taxHandlerAddress);
+
+        emit TaxHandlerChanged(oldTaxHandlerAddress, taxHandlerAddress);
+    }
+
+    /**
+     * @notice Set new treasury handler contract.
+     * @param treasuryHandlerAddress Address of new treasury handler contract.
+     */
+    function setTreasuryHandler(address treasuryHandlerAddress) external onlyOwner {
+        address oldTreasuryHandlerAddress = address(treasuryHandler);
+        treasuryHandler = ITreasuryHandler(treasuryHandlerAddress);
+
+        emit TreasuryHandlerChanged(oldTreasuryHandlerAddress, treasuryHandlerAddress);
     }
 
     /**
