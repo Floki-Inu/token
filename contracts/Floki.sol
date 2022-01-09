@@ -51,11 +51,27 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     /// @dev Emitted when the treasury handler contract is changed.
     event TreasuryHandlerChanged(address oldAddress, address newAddress);
 
+    /// @dev Name of the token.
+    string private _name;
+
+    /// @dev Symbol of the token.
+    string private _symbol;
+
     /**
+     * @param name Name of the token.
+     * @param symbol Symbol of the token.
      * @param taxHandlerAddress Initial tax handler contract.
      * @param treasuryHandlerAddress Initial treasury handler contract.
      */
-    constructor(address taxHandlerAddress, address treasuryHandlerAddress) {
+    constructor(
+        string memory name,
+        string memory symbol,
+        address taxHandlerAddress,
+        address treasuryHandlerAddress
+    ) {
+        _name = name;
+        _symbol = symbol;
+
         taxHandler = ITaxHandler(taxHandlerAddress);
         treasuryHandler = ITreasuryHandler(treasuryHandlerAddress);
 
@@ -64,15 +80,18 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
         emit Transfer(address(0), _msgSender(), totalSupply());
     }
 
-    function name() public pure returns (string memory) {
-        return "FLOKI";
+    /**
+     * @return Name of the token.
+     */
+    function name() public view returns (string memory) {
+        return _name;
     }
 
     /**
      * @return Symbol of the token.
      */
-    function symbol() external pure returns (string memory) {
-        return "FLOKI";
+    function symbol() external view returns (string memory) {
+        return _symbol;
     }
 
     /**
