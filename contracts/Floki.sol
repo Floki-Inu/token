@@ -58,19 +58,19 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     string private _symbol;
 
     /**
-     * @param name Name of the token.
-     * @param symbol Symbol of the token.
+     * @param name_ Name of the token.
+     * @param symbol_ Symbol of the token.
      * @param taxHandlerAddress Initial tax handler contract.
      * @param treasuryHandlerAddress Initial treasury handler contract.
      */
     constructor(
-        string memory name,
-        string memory symbol,
+        string memory name_,
+        string memory symbol_,
         address taxHandlerAddress,
         address treasuryHandlerAddress
     ) {
-        _name = name;
-        _symbol = symbol;
+        _name = name_;
+        _symbol = symbol_;
 
         taxHandler = ITaxHandler(taxHandlerAddress);
         treasuryHandler = ITreasuryHandler(treasuryHandlerAddress);
