@@ -16,6 +16,9 @@ interface IGovernanceToken {
 
     function getVotesAtBlock(address account, uint32 blockNumber) external view returns (uint224);
 
+    /// @dev Emitted whenever a new delegate is set for an account.
     event DelegateChanged(address delegator, address currentDelegate, address newDelegate);
+
+    /// @dev Emitted when a delegate's vote count changes.
     event DelegateVotesChanged(address delegatee, uint224 oldVotes, uint224 newVotes);
 }
