@@ -64,11 +64,11 @@ abstract contract ExchangePoolProcessor is Ownable {
     function setPrimaryPool(address exchangePool) external onlyOwner {
         require(
             _exchangePools.contains(exchangePool),
-            "ExchangePoolProcessor:setPrimaryPool:INVALID_POOL - Given address is not registered as exchange pool."
+            "ExchangePoolProcessor:setPrimaryPool:INVALID_POOL: Given address is not registered as exchange pool."
         );
         require(
             primaryPool != exchangePool,
-            "ExchangePoolProcessor:setPrimaryPool:ALREADY_SET - This address is already the primary pool address."
+            "ExchangePoolProcessor:setPrimaryPool:ALREADY_SET: This address is already the primary pool address."
         );
 
         address oldPrimaryPool = primaryPool;
