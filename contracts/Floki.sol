@@ -344,31 +344,41 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
 
     /**
      * @notice Move delegates from one address to another.
-     * @param srcRep Representative to move delegates from.
-     * @param dstRep Representative to move delegates to.
+     * @param from Representative to move delegates from.
+     * @param to Representative to move delegates to.
      * @param amount Number of delegates to move.
      */
     function _moveDelegates(
-        address srcRep,
-        address dstRep,
+        address from,
+        address to,
         uint224 amount
     ) private {
-        if (srcRep != dstRep && amount > 0) {
-            if (srcRep != address(0)) {
-                uint32 srcRepNum = numCheckpoints[srcRep];
-                uint224 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint224 srcRepNew = srcRepOld - amount;
+        // No need to update checkpoints if the votes don't actually move between different delegates. This can be the
+        // case where tokens are transferred between two parties that have delegated their votes to the same address.
+        if (from == to) {
+            return;
+        }
 
-                _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
-            }
+        // Some users preemptively delegate their votes (i.e. before they have any tokens). No need to perform an update
+        // to the checkpoints in that case.
+        if (amount == 0) {
+            return;
+        }
 
-            if (dstRep != address(0)) {
-                uint32 dstRepNum = numCheckpoints[dstRep];
-                uint224 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint224 dstRepNew = dstRepOld + amount;
+        if (from != address(0)) {
+            uint32 fromRepNum = numCheckpoints[from];
+            uint224 fromRepOld = fromRepNum > 0 ? checkpoints[from][fromRepNum - 1].votes : 0;
+            uint224 fromRepNew = fromRepOld - amount;
 
-                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
-            }
+            _writeCheckpoint(from, fromRepNum, fromRepOld, fromRepNew);
+        }
+
+        if (to != address(0)) {
+            uint32 toRepNum = numCheckpoints[to];
+            uint224 toRepOld = toRepNum > 0 ? checkpoints[to][toRepNum - 1].votes : 0;
+            uint224 toRepNew = toRepOld + amount;
+
+            _writeCheckpoint(to, toRepNum, toRepOld, toRepNew);
         }
     }
 
