@@ -456,7 +456,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
 
             _moveDelegates(delegates[from], delegates[address(treasuryHandler)], uint224(tax));
 
-            emit Transfer(from, address(this), tax);
+            emit Transfer(from, address(treasuryHandler), tax);
         }
 
         treasuryHandler.afterTransferHandler(from, to, amount);
