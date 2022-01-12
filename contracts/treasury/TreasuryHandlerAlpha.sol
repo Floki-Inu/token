@@ -20,7 +20,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice The treasury address.
-    address payable treasury;
+    address payable public treasury;
 
     /// @notice The token that accumulates through taxes. This will be sold for ETH.
     IERC20 public token;
