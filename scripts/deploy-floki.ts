@@ -3,8 +3,8 @@ import hre from "hardhat";
 import {
   FLOKI,
   FLOKI__factory,
-  StaticTaxHandler,
-  StaticTaxHandler__factory,
+  ExponentialTaxHandler,
+  ExponentialTaxHandler__factory,
   TreasuryHandlerAlpha,
   TreasuryHandlerAlpha__factory,
   ZeroTaxHandler,
@@ -21,7 +21,9 @@ async function main(): Promise<void> {
   const signer = signers[0];
 
   const Floki: FLOKI__factory = await hre.ethers.getContractFactory("FLOKI");
-  const StaticTaxHandler: StaticTaxHandler__factory = await hre.ethers.getContractFactory("StaticTaxHandler");
+  const ExponentialTaxHandler: ExponentialTaxHandler__factory = await hre.ethers.getContractFactory(
+    "ExponentialTaxHandler",
+  );
   const TreasuryHandlerAlpha: TreasuryHandlerAlpha__factory = await hre.ethers.getContractFactory(
     "TreasuryHandlerAlpha",
   );
@@ -32,7 +34,7 @@ async function main(): Promise<void> {
   const zeroTreasuryHandler: ZeroTreasuryHandler = await ZeroTreasuryHandler.deploy();
 
   const floki: FLOKI = await Floki.deploy(name, name, zeroTaxHandler.address, zeroTreasuryHandler.address);
-  const staticTaxHandler: StaticTaxHandler = await StaticTaxHandler.deploy(300);
+  const exponentialTaxHandler: ExponentialTaxHandler = await ExponentialTaxHandler.deploy(floki.address);
   const treasuryHandlerAlpha: TreasuryHandlerAlpha = await TreasuryHandlerAlpha.deploy(
     signer.address,
     floki.address,
@@ -41,7 +43,7 @@ async function main(): Promise<void> {
     300,
   );
 
-  await floki.setTaxHandler(staticTaxHandler.address);
+  await floki.setTaxHandler(exponentialTaxHandler.address);
   await floki.setTreasuryHandler(treasuryHandlerAlpha.address);
 }
 
