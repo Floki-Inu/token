@@ -202,6 +202,11 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
      * @param amount The number of tokens to withdraw.
      */
     function withdraw(address tokenAddress, uint256 amount) external onlyOwner {
+        require(
+            tokenAddress != address(token),
+            "TreasuryHandlerAlpha:withdraw:INVALID_TOKEN: Not allowed to withdraw token required for swaps."
+        );
+
         if (tokenAddress == address(0)) {
             treasury.sendValue(amount);
         } else {
