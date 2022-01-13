@@ -115,7 +115,7 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
 
             uint256 currentWeiBalance = address(this).balance;
             _swapTokensForEth(tokensForSwap);
-            uint256 weiEarned = currentWeiBalance - address(this).balance;
+            uint256 weiEarned = address(this).balance - currentWeiBalance;
 
             // No need to divide this number, because that was only to have enough tokens remaining to pair with this
             // ETH value.
