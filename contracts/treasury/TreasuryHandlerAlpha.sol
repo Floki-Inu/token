@@ -111,16 +111,19 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
             //
             // The number is divided by two to preserve the token side of the token/WETH pool.
             uint256 tokensForLiquidity = (contractTokenBalance * liquidityBasisPoints) / 20000;
+            uint256 tokensForSwap = contractTokenBalance - tokensForLiquidity;
 
             uint256 currentWeiBalance = address(this).balance;
-            _swapTokensForEth(contractTokenBalance);
+            _swapTokensForEth(tokensForSwap);
             uint256 weiEarned = currentWeiBalance - address(this).balance;
 
             // No need to divide this number, because that was only to have enough tokens remaining to pair with this
             // ETH value.
             uint256 weiForLiquidity = (weiEarned * liquidityBasisPoints) / 10000;
 
-            _addLiquidity(tokensForLiquidity, weiForLiquidity);
+            if (tokensForLiquidity > 0) {
+                _addLiquidity(tokensForLiquidity, weiForLiquidity);
+            }
 
             // It's cheaper to get the active balance rather than calculating based off of the `currentWeiBalance` and
             // `weiForLiquidity` numbers.
