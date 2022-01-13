@@ -230,6 +230,9 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
      * @param weiAmount ETH value to pair with the tokens.
      */
     function _addLiquidity(uint256 tokenAmount, uint256 weiAmount) private {
+        // Ensure the router can perform the transfer for the designated number of tokens.
+        token.approve(address(router), tokenAmount);
+
         // Both minimum values are set to zero to allow for any form of slippage.
         router.addLiquidityETH{ value: weiAmount }(
             address(token),
