@@ -248,4 +248,9 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
             block.timestamp
         );
     }
+
+    /**
+     * @notice Allow contract to accept ETH.
+     */
+    receive() external payable {}
 }
