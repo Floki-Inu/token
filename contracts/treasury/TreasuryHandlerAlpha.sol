@@ -173,7 +173,12 @@ contract TreasuryHandlerAlpha is ITreasuryHandler, LenientReentrancyGuard, Excha
      * @notice Set new price impact basis points value.
      * @param newBasisPoints New price impact basis points value.
      */
-    function setPriceImpactPercentage(uint256 newBasisPoints) external onlyOwner {
+    function setPriceImpactBasisPoints(uint256 newBasisPoints) external onlyOwner {
+        require(
+            newBasisPoints < 1500,
+            "TreasuryHandlerAlpha:setPriceImpactBasisPoints:OUT_OF_BOUNDS: Cannot set price impact too high."
+        );
+
         uint256 oldBasisPoints = priceImpactBasisPoints;
         priceImpactBasisPoints = newBasisPoints;
 
