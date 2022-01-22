@@ -114,7 +114,7 @@ contract FLOKI is IERC20, IGovernanceToken, Ownable {
     }
 
     /**
-     * @notice Get token balance of given given account.
+     * @notice Get token balance of given account.
      * @param account Address to retrieve balance for.
      * @return The number of tokens owned by `account`.
      */
