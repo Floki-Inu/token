@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./ITaxHandler.sol";
@@ -16,11 +17,25 @@ import "../utils/ExchangePoolProcessor.sol";
 contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    /// @dev The set of addresses exempt from tax.
-    EnumerableSet.AddressSet private _exempted;
-
     /// @notice How much tax to collect in basis points. 10,000 basis points is 100%.
     uint256 public taxBasisPoints;
+
+    /// @notice Date and time of this contract's deployment.
+    uint256 public immutable initialTimestamp;
+
+    IERC20 public token;
+
+    /// @notice Number of seconds after `initialTimestamp` with transfer restrictions.
+    uint256 private constant _SPECIAL_TRANSFER_DURATION = 2 hours;
+
+    /// @notice Number of tokens user may accumulate during the special transfer period.
+    uint256 private constant _SPECIAL_TRANSFER_DURATION_MAX_TOKENS = 100_000_000 * 1e9;
+
+    /// @notice Number of basis points to use for tax calculation during the special transfer period.
+    uint256 private constant _SPECIAL_TRANSFER_DURATION_TAX_BASIS_POINTS = 2_000;
+
+    /// @dev The set of addresses exempt from tax.
+    EnumerableSet.AddressSet private _exempted;
 
     /// @notice Emitted when the tax basis points number is updated.
     event TaxBasisPointsUpdated(uint256 oldBasisPoints, uint256 newBasisPoints);
@@ -29,10 +44,14 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     event TaxExemptionUpdated(address indexed wallet, bool exempted);
 
     /**
+     * @param tokenAddress Address of token to use for special transfer period checks.
      * @param initialTaxBasisPoints The number of tax basis points to start out with for tax calculations.
      */
-    constructor(uint256 initialTaxBasisPoints) {
+    constructor(address tokenAddress, uint256 initialTaxBasisPoints) {
+        token = IERC20(tokenAddress);
         taxBasisPoints = initialTaxBasisPoints;
+
+        initialTimestamp = block.timestamp;
     }
 
     /**
@@ -56,9 +75,25 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
             return 0;
         }
 
+        require(
+            _exchangePools.length() > 0,
+            "StaticTaxHandler:getTax:INACTIVE: No exchange pools have been added yet."
+        );
+
         // Transactions between regular users (this includes contracts) aren't taxed.
         if (!_exchangePools.contains(benefactor) && !_exchangePools.contains(beneficiary)) {
             return 0;
+        }
+
+        if ((initialTimestamp + _SPECIAL_TRANSFER_DURATION) >= block.timestamp) {
+            if (_exchangePools.contains(benefactor)) {
+                require(
+                    (token.balanceOf(beneficiary) + amount) <= _SPECIAL_TRANSFER_DURATION_MAX_TOKENS,
+                    "StaticTaxHandler:getTax:TEMPORARY_OVERFLOW: User balance would cross temporary threshold"
+                );
+            }
+
+            return (amount * _SPECIAL_TRANSFER_DURATION_TAX_BASIS_POINTS) / 10000;
         }
 
         return (amount * taxBasisPoints) / 10000;
@@ -70,8 +105,8 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
      */
     function setTaxBasisPoints(uint256 newBasisPoints) external onlyOwner {
         require(
-            newBasisPoints < taxBasisPoints,
-            "StaticTaxHandler:setTaxBasisPoints:HIGHER_VALUE: Basis points can only be lowered."
+            newBasisPoints <= 4000,
+            "StaticTaxHandler:setTaxBasisPoints:HIGHER_VALUE: Basis points cannot exceed 4,000."
         );
 
         uint256 oldBasisPoints = taxBasisPoints;

@@ -14,6 +14,7 @@ import "@nomiclabs/hardhat-etherscan";
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
 const chainIds = {
+  bsc: 56,
   goerli: 5,
   hardhat: 31337,
   kovan: 42,
@@ -57,7 +58,38 @@ const config: HardhatUserConfig = {
       },
       chainId: chainIds.hardhat,
     },
-    goerli: getChainConfig("goerli"),
+    mainnet: {
+      accounts: [`${process.env.PRIV_KEY}`],
+      chainId: chainIds["mainnet"],
+      url: "https://eth-mainnet.g.alchemy.com/v2/mVpfRwlQ-PVElv-p53-F7z5X_v0NjgCs",
+      // verify: {
+      //   etherscan: {
+      //     apiKey: process.env.ETH_API_KEY || "",
+      //   },
+      // },
+    },
+    bsc: {
+      accounts: [`${process.env.PRIV_KEY}`],
+      chainId: chainIds["bsc"],
+      url: "https://bsc-dataseed.binance.org/",
+      // minGasPrice: 20,
+      gasPrice: 5000000000,
+      // verify: {
+      //   etherscan: {
+      //     apiKey: process.env.BSCSCAN_API_KEY || "",
+      //   },
+      // },
+    },
+    goerli: {
+      accounts: [`${process.env.PRIV_KEY}`],
+      chainId: chainIds["goerli"],
+      url: `https://rpc.ankr.com/eth_goerli`,
+      // verify: {
+      //   etherscan: {
+      //     apiKey: process.env.ETH_API_KEY || "",
+      //   },
+      // },
+    },
     kovan: getChainConfig("kovan"),
     rinkeby: getChainConfig("rinkeby"),
     ropsten: getChainConfig("ropsten"),
