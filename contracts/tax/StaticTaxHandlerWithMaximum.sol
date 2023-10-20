@@ -14,7 +14,7 @@ import "../utils/ExchangePoolProcessor.sol";
  * added and removed by the owner of this contract. The owner of the contract should be set to a DAO-controlled timelock
  * or at the very least a multisig wallet.
  */
-contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
+contract StaticTaxHandlerWithMaximum is ITaxHandler, ExchangePoolProcessor {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice How much tax to collect in basis points. 10,000 basis points is 100%.
@@ -24,6 +24,9 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
 
     /// @dev The set of addresses exempt from tax.
     EnumerableSet.AddressSet private _exempted;
+
+    /// @notice The maximum number of tokens a wallet may hold at any time.
+    uint256 public maxTokensAllowed;
 
     ///  @notice Emitted when the maximum number of tokens a wallet may hold is updated.
     event MaxTokensAllowedUpdated(uint256 oldMax, uint256 newMax);
@@ -38,9 +41,14 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
      * @param tokenAddress Address of token to use for special transfer period checks.
      * @param initialTaxBasisPoints The number of tax basis points to start out with for tax calculations.
      */
-    constructor(address tokenAddress, uint256 initialTaxBasisPoints) {
+    constructor(
+        address tokenAddress,
+        uint256 initialMaxTokensAllowed,
+        uint256 initialTaxBasisPoints
+    ) {
         token = IERC20(tokenAddress);
 
+        maxTokensAllowed = initialMaxTokensAllowed;
         taxBasisPoints = initialTaxBasisPoints;
     }
 
@@ -75,11 +83,27 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
             return 0;
         }
 
+        // Only check on buys.
+        if (_exchangePools.contains(benefactor)) {
+            require(token.balanceOf(beneficiary) + amount <= maxTokensAllowed, "StaticTaxHandler:getTax:LIMIT_REACHED");
+        }
+
         return (amount * taxBasisPoints) / 10000;
     }
 
     /**
-     * @notice Set new number for tax basis points.
+     * @notice Set new number for max tokens allowed.
+     * @param newMax New maximum for tokens allowed per wallet address.
+     */
+    function setMaxTokensAllowed(uint256 newMax) external onlyOwner {
+        uint256 oldMax = maxTokensAllowed;
+        maxTokensAllowed = newMax;
+
+        emit MaxTokensAllowedUpdated(oldMax, newMax);
+    }
+
+    /**
+     * @notice Set new number for tax basis points. This number can only ever be lowered.
      * @param newBasisPoints New tax basis points number to set for calculations.
      */
     function setTaxBasisPoints(uint256 newBasisPoints) external onlyOwner {
