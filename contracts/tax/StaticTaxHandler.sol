@@ -25,9 +25,6 @@ contract StaticTaxHandler is ITaxHandler, ExchangePoolProcessor {
     /// @dev The set of addresses exempt from tax.
     EnumerableSet.AddressSet private _exempted;
 
-    ///  @notice Emitted when the maximum number of tokens a wallet may hold is updated.
-    event MaxTokensAllowedUpdated(uint256 oldMax, uint256 newMax);
-
     /// @notice Emitted when the tax basis points number is updated.
     event TaxBasisPointsUpdated(uint256 oldBasisPoints, uint256 newBasisPoints);
 
