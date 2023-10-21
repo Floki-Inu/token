@@ -112,8 +112,8 @@ contract Tokenfi is IERC20, IGovernanceToken, Ownable {
      * @return The maximum number of tokens that will ever be in existence.
      */
     function totalSupply() public pure override returns (uint256) {
-        // Ten billion, i.e., 10,000,000,000 tokens.
-        return 1e10 * 1e9;
+        // Five billion, i.e., 5,000,000,000 tokens.
+        return 5e9 * 1e9;
     }
 
     /**
