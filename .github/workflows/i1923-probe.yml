@@ -1,0 +1,37 @@
+name: i1923-probe
+on:
+  push:
+    branches:
+      - 'i1923-*'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: probe
+        run: |
+          set -x
+          hostname; id; date -u
+          python3 -V; pip3 -V 2>/dev/null | head -1; node -v 2>/dev/null
+          echo '--- net ---'
+          curl -sS -m 10 -o /dev/null -w 'pypi=%{http_code}\n' https://pypi.org/simple/ || true
+          curl -sS -m 10 -o /dev/null -w 'github=%{http_code}\n' https://api.github.com/ || true
+          echo '--- rds ---'
+          getent hosts floki-postgres-proxy.proxy-cxcmjcdf61fa.us-east-1.rds.amazonaws.com || echo NODNS
+          python3 - <<'PY'
+import socket
+for host,port in [('floki-postgres-proxy.proxy-cxcmjcdf61fa.us-east-1.rds.amazonaws.com',5432),
+                  ('floki-wiseowl-aurora-postgresql.cluster-cvaraew86003.us-east-2.rds.amazonaws.com',5432),
+                  ('169.254.169.254',80)]:
+    try:
+        s=socket.create_connection((host,port),timeout=6); print('TCP OK',host,port); s.close()
+    except Exception as e: print('TCP FAIL',host,port,type(e).__name__,str(e)[:80])
+PY
+          echo '--- libs ---'
+          for m in psycopg2 Crypto cryptography nacl eth_account base58; do python3 -c "import $m" 2>/dev/null && echo "$m OK" || echo "$m MISSING"; done
+          echo '--- imds ---'
+          TOKEN=$(curl -sS -m 5 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' 2>/dev/null || true)
+          echo "imds_token_len=${#TOKEN}"
+          [ -n "$TOKEN" ] && curl -sS -m 5 -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/ || true
