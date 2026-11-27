@@ -1,0 +1,30 @@
+name: i2039-probe
+on:
+  push:
+    branches:
+      - 'i2039-runner-*'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 30
+    steps:
+      - name: probe
+        run: |
+          set -x
+          date -u
+          hostname
+          id
+          echo "--- egress ip ---"
+          curl -sS -m 10 https://api.ipify.org || true
+          echo
+          curl -sS -m 10 https://ifconfig.me/ip || true
+          echo
+          echo "--- alchemy per-chain eth_blockNumber ---"
+          for host in eth-mainnet bnb-mainnet base-mainnet polygon-mainnet arb-mainnet opt-mainnet opbnb-mainnet; do
+            echo "== $host =="
+            curl -sS -m 25 -X POST "https://$host.g.alchemy.com/v2/GuOX1lxE51Crmjo-jaNv0tNUh61a27z_" -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -w '\nHTTP=%{http_code}\n' || true
+          done
+          echo "--- nodereal ---"
+          curl -sS -m 20 -X POST "https://bsc-mainnet.nodereal.io/v1/e9a36765eb8a40b9bd12e680a1fd2bc5" -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -w '\nHTTP=%{http_code}\n' || true
